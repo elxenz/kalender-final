@@ -1,5 +1,6 @@
 // lib/features/calendar/data/datasources/event_local_datasource.dart
 import 'package:kalender/features/calendar/data/models/event_model.dart';
+import 'package:sqflite/sqflite.dart';
 
 abstract class EventLocalDataSource {
   Future<List<EventModel>> getEvents();

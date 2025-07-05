@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kalender/app/config/router/app_router.dart';
 import 'package:kalender/app/config/theme/app_theme.dart';
+import 'package:kalender/features/settings/presentation/provider/settings_provider.dart';
 import 'package:provider/provider.dart';
 
 class MyApp extends StatelessWidget {
@@ -16,7 +17,7 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           // Tambahkan null check atau nilai default
-          themeMode: settings.themeMode ?? ThemeMode.system,
+          themeMode: settings.themeMode,
           onGenerateRoute: AppRouter.onGenerateRoute,
           // Rute awal bisa didefinisikan di sini
           initialRoute: AppRouter.calendar,
