@@ -48,7 +48,7 @@ class EventSearchDelegate extends SearchDelegate<Event?> {
     final queryLower = query.toLowerCase();
     final filteredEvents = events.where((event) {
       return event.title.toLowerCase().contains(queryLower) ||
-          event.description.toLowerCase().contains(queryLower);
+          (event.description.toLowerCase().contains(queryLower));
     }).toList();
 
     if (query.isEmpty) {

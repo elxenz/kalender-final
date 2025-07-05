@@ -11,6 +11,11 @@ dependencies:
   flutter:
     sdk: flutter
   
+  calendar_view: ^1.0.4
+  flutter_animate: ^4.5.0
+  flutter_localizations:
+    sdk: flutter
+
   # UI Components
   cupertino_icons: ^1.0.8
   table_calendar: ^3.0.9
