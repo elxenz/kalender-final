@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart'; // Impor ini
 import 'package:kalender/app/app.dart';
 import 'package:kalender/core/utils/notification_helper.dart';
 import 'package:kalender/features/calendar/data/datasources/event_local_datasource.dart';
 import 'package:kalender/features/calendar/data/repositories/event_repository_impl.dart';
-import 'package:kalender/features/calendar/domain/repositories/event_repository.dart';
 import 'package:kalender/features/calendar/presentation/provider/event_provider.dart';
 import 'package:kalender/features/settings/data/datasources/settings_local_datasource.dart';
 import 'package:kalender/features/settings/data/repositories/settings_repository_impl.dart';
-import 'package:kalender/features/settings/domain/repositories/settings_repository.dart';
 import 'package:kalender/features/settings/presentation/provider/settings_provider.dart';
 import 'package:provider/provider.dart';
 // Impor yang benar untuk shared_preferences
@@ -18,6 +17,9 @@ import 'package:path/path.dart';
 void main() async {
   // 1. Inisialisasi Binding
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Tambahkan baris ini untuk inisialisasi format tanggal
+  await initializeDateFormatting('id_ID', null);
 
   // 2. Inisialisasi Database dan DataSource
   final database = openDatabase(

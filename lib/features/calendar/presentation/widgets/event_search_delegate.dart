@@ -9,12 +9,16 @@ class EventSearchDelegate extends SearchDelegate<Event?> {
   EventSearchDelegate({required this.events});
 
   @override
+  String get searchFieldLabel => 'Cari acara...';
+
+  @override
   List<Widget> buildActions(BuildContext context) {
     return [
       IconButton(
         icon: const Icon(Icons.clear),
         onPressed: () {
           query = '';
+          showSuggestions(context);
         },
       ),
     ];
@@ -41,20 +45,24 @@ class EventSearchDelegate extends SearchDelegate<Event?> {
   }
 
   Widget _buildSearchResults() {
+    final queryLower = query.toLowerCase();
+    final filteredEvents = events.where((event) {
+      return event.title.toLowerCase().contains(queryLower) ||
+          event.description.toLowerCase().contains(queryLower);
+    }).toList();
+
     if (query.isEmpty) {
       return const Center(
-        child: Text('Masukkan kata kunci pencarian'),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search, size: 64, color: Colors.grey),
+            SizedBox(height: 8),
+            Text('Cari berdasarkan judul atau deskripsi'),
+          ],
+        ),
       );
     }
-
-    final filteredEvents = events.where((event) {
-      final titleLower = event.title.toLowerCase();
-      final descriptionLower = event.description.toLowerCase();
-      final queryLower = query.toLowerCase();
-
-      return titleLower.contains(queryLower) ||
-          descriptionLower.contains(queryLower);
-    }).toList();
 
     if (filteredEvents.isEmpty) {
       return const Center(
@@ -67,29 +75,16 @@ class EventSearchDelegate extends SearchDelegate<Event?> {
       itemBuilder: (context, index) {
         final event = filteredEvents[index];
         return ListTile(
-          title: Text(event.title),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (event.description.isNotEmpty) Text(event.description),
-              Text(
-                '${DateFormat('dd MMM yyyy').format(event.date)} - ${DateFormat.jm().format(DateTime(
-                  event.date.year,
-                  event.date.month,
-                  event.date.day,
-                  event.startTime.hour,
-                  event.startTime.minute,
-                ))}',
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
           leading: CircleAvatar(
             backgroundColor: Color(event.colorValue),
             child: Text(
               event.title.isNotEmpty ? event.title[0].toUpperCase() : 'A',
               style: const TextStyle(color: Colors.white),
             ),
+          ),
+          title: Text(event.title),
+          subtitle: Text(
+            DateFormat.yMMMMEEEEd('id_ID').format(event.date),
           ),
           onTap: () {
             close(context, event);

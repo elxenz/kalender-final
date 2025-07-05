@@ -31,6 +31,7 @@ class EventDetailScreen extends StatelessWidget {
         ],
       ),
       body: SingleChildScrollView(
+        // Beri nama variabel yang berbeda jika ingin menggunakannya lagi
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,32 +117,6 @@ class EventDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 32),
-
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _editEvent(context),
-                    icon: const Icon(Icons.edit),
-                    label: const Text('Edit'),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _deleteEvent(context),
-                    icon: const Icon(Icons.delete),
-                    label: const Text('Hapus'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -157,10 +132,10 @@ class EventDetailScreen extends StatelessWidget {
     );
 
     if (result == true && context.mounted) {
-      // Refresh the event list
-      context.read<EventProvider>().getEvents();
-      // Go back to calendar
-      Navigator.pop(context);
+      // Refresh the event list and go back
+      await context.read<EventProvider>().getEvents();
+      // Memberi nilai balik true ke halaman sebelumnya (calendar_screen)
+      if (context.mounted) Navigator.pop(context, true);
     }
   }
 
@@ -178,28 +153,33 @@ class EventDetailScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Hapus'),
           ),
         ],
       ),
     );
 
     if (confirmed == true && event.id != null) {
+      // Periksa mounted sebelum operasi async
+      if (!context.mounted) return;
+      final eventProvider = context.read<EventProvider>();
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
+
       try {
-        await context.read<EventProvider>().deleteEvent(event.id!);
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Acara berhasil dihapus')),
-          );
-        }
+        await eventProvider.deleteEvent(event.id!);
+        // Periksa mounted setelah operasi async
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('Acara berhasil dihapus')),
+        );
+        // Memberi nilai balik true ke halaman sebelumnya (calendar_screen)
+        navigator.pop(true);
       } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
-        }
+        // Periksa mounted setelah operasi async
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text('Gagal menghapus acara: $e')),
+        );
       }
     }
   }
