@@ -26,13 +26,11 @@ class AppDrawer extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.only(top: 8.0),
               children: [
-                // Bagian untuk mengubah tampilan kalender
                 _buildViewSwitcher(context, viewProvider, colorScheme),
 
-                // Pemisah
                 const Divider(indent: 16, endIndent: 16),
 
-                // Menu untuk fitur-fitur lain
+                // --- MENU TO-DO LIST DITAMBAHKAN KEMBALI DI SINI ---
                 ListTile(
                   leading: const Icon(Icons.check_box_outlined),
                   title: const Text('Tugas'),
@@ -41,6 +39,7 @@ class AppDrawer extends StatelessWidget {
                     Navigator.pushNamed(context, AppRouter.todoList);
                   },
                 ),
+
                 ListTile(
                   leading: const Icon(Icons.refresh_outlined),
                   title: const Text('Segarkan'),
@@ -65,7 +64,6 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // Widget untuk membangun pengalih tampilan
   Widget _buildViewSwitcher(BuildContext context, ViewProvider viewProvider,
       ColorScheme colorScheme) {
     return Column(
@@ -84,7 +82,6 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // Helper untuk membuat satu baris item pilihan tampilan
   Widget _buildViewTile(
     BuildContext context,
     ViewProvider viewProvider,

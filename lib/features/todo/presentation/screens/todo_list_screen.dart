@@ -1,6 +1,5 @@
 // lib/features/todo/presentation/screens/todo_list_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart'; // Impor package animasi
 import 'package:intl/intl.dart';
 import 'package:kalender/features/todo/domain/todo.dart';
 import 'package:kalender/features/todo/presentation/provider/todo_provider.dart';
@@ -13,17 +12,18 @@ class TodoListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final todoProvider = context.watch<TodoProvider>();
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('To-do List'),
-      ),
+      appBar: AppBar(title: const Text('To-do List')),
       body: todoProvider.todos.isEmpty
           ? _buildEmptyState()
           : _buildTodoList(context, todoProvider.todos),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditTodoDialog(context),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: const Icon(Icons.add),
-      ).animate().scale(delay: 500.ms), // <-- ANIMASI PADA FAB
+      floatingActionButton: Builder(
+        builder: (dialogContext) => FloatingActionButton(
+          onPressed: () => _showAddEditTodoDialog(dialogContext),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: const Icon(Icons.add),
+        ),
+      ),
     );
   }
 
@@ -38,7 +38,7 @@ class TodoListScreen extends StatelessWidget {
               style: TextStyle(fontSize: 18, color: Colors.grey)),
         ],
       ),
-    ).animate().fadeIn();
+    );
   }
 
   Widget _buildTodoList(BuildContext context, List<Todo> todos) {
@@ -49,18 +49,12 @@ class TodoListScreen extends StatelessWidget {
         final todo = todos[index];
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
-          elevation: 1,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
             onTap: () => _showAddEditTodoDialog(context, todo: todo),
             leading: Checkbox(
               value: todo.isCompleted,
-              onChanged: (value) {
-                context.read<TodoProvider>().toggleTodoStatus(todo);
-              },
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4)),
+              onChanged: (value) =>
+                  context.read<TodoProvider>().toggleTodoStatus(todo),
             ),
             title: Text(
               todo.title,
@@ -78,10 +72,7 @@ class TodoListScreen extends StatelessWidget {
                   context.read<TodoProvider>().deleteTodo(todo.id!),
             ),
           ),
-        )
-            .animate()
-            .fadeIn(duration: 400.ms)
-            .slideX(begin: 0.5, end: 0); // <-- ANIMASI PADA ITEM
+        );
       },
     );
   }
@@ -98,7 +89,108 @@ class TodoListScreen extends StatelessWidget {
   }
 
   void _showAddEditTodoDialog(BuildContext context, {Todo? todo}) {
-    // ... (kode dialog tidak perlu diubah, karena transisi sudah dihandle oleh AppRouter)
-    // ...
+    final textController = TextEditingController(text: todo?.title);
+    DateTime? selectedDueDate = todo?.dueDate;
+    TimeOfDay? selectedReminderTime = todo?.reminderTime;
+    final isEditing = todo != null;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(isEditing ? 'Edit Tugas' : 'Tugas Baru'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: textController,
+                    autofocus: true,
+                    decoration: const InputDecoration(hintText: 'Judul tugas'),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined, size: 20),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        child: Text(selectedDueDate == null
+                            ? 'Tambah tanggal'
+                            : DateFormat.yMMMEd('id_ID')
+                                .format(selectedDueDate!)),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDueDate ?? DateTime.now(),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setDialogState(() => selectedDueDate = picked);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  if (selectedDueDate != null)
+                    Row(
+                      children: [
+                        const Icon(Icons.alarm_outlined, size: 20),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          child: Text(selectedReminderTime == null
+                              ? 'Tambah waktu'
+                              : selectedReminderTime!.format(context)),
+                          onPressed: () async {
+                            final picked = await showTimePicker(
+                              context: context,
+                              initialTime:
+                                  selectedReminderTime ?? TimeOfDay.now(),
+                            );
+                            if (picked != null) {
+                              setDialogState(
+                                  () => selectedReminderTime = picked);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (textController.text.isNotEmpty) {
+                      final provider = context.read<TodoProvider>();
+                      if (isEditing) {
+                        provider.updateTodo(todo.copyWith(
+                          title: textController.text,
+                          dueDate: selectedDueDate,
+                          reminderTime: selectedReminderTime,
+                        ));
+                      } else {
+                        provider.addTodo(
+                          textController.text,
+                          dueDate: selectedDueDate,
+                          reminderTime: selectedReminderTime,
+                        );
+                      }
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: Text(isEditing ? 'Simpan' : 'Tambah'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 }

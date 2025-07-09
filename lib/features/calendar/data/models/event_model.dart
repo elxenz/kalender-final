@@ -70,6 +70,7 @@ class EventModel extends Event {
       'endTime':
           '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
       'colorValue': colorValue,
+      
     };
   }
 }
