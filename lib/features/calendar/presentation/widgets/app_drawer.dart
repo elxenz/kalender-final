@@ -17,7 +17,7 @@ class AppDrawer extends StatelessWidget {
       child: Column(
         children: [
           AppBar(
-            title: const Text('Google Kalender'),
+            title: const Text('Kalender Akademik'),
             automaticallyImplyLeading: false,
             elevation: 1,
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -72,8 +72,6 @@ class AppDrawer extends StatelessWidget {
             Icons.view_agenda_outlined),
         _buildViewTile(context, viewProvider, 'Hari', CalendarView.hari,
             Icons.view_day_outlined),
-        _buildViewTile(context, viewProvider, '3 Hari', CalendarView.tigaHari,
-            Icons.view_column_outlined),
         _buildViewTile(context, viewProvider, 'Minggu', CalendarView.minggu,
             Icons.view_week_outlined),
         _buildViewTile(context, viewProvider, 'Bulan', CalendarView.bulan,

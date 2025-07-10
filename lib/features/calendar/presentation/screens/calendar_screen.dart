@@ -24,6 +24,7 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   final EventController _eventController = EventController();
   final GlobalKey<DayViewState> _dayViewKey = GlobalKey();
+  final GlobalKey<WeekViewState> _weekViewKey = GlobalKey();
 
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -122,14 +123,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   AppBar _buildAppBar(BuildContext context, ViewProvider viewProvider,
       EventProvider eventProvider) {
-    final titleDate = viewProvider.currentView == CalendarView.minggu
-        ? DateFormat.yMMMMd('id_ID').format(_focusedDay)
-        : DateFormat.yMMMM('id_ID').format(_focusedDay);
+    final now = DateTime.now();
+
+    String getTitle() {
+      // FIX: Menggunakan 'currentDate' yang merupakan properti yang benar dan ada di kedua state (DayView dan WeekView)
+      DateTime? dayViewDate = _dayViewKey.currentState?.currentDate;
+      DateTime? weekViewDate = _weekViewKey.currentState?.currentDate;
+
+      switch (viewProvider.currentView) {
+        case CalendarView.jadwal:
+          return 'Jadwal';
+        case CalendarView.hari:
+          return DateFormat.yMMMMEEEEd('id_ID')
+              .format(dayViewDate ?? _focusedDay);
+        case CalendarView.tigaHari:
+        case CalendarView.minggu:
+          return DateFormat.yMMMM('id_ID').format(weekViewDate ?? _focusedDay);
+        case CalendarView.bulan:
+          return DateFormat.yMMMM('id_ID').format(_focusedDay);
+      }
+    }
 
     return AppBar(
-      title: Text(viewProvider.currentView == CalendarView.bulan
-          ? 'Kalender'
-          : titleDate),
+      title: Text(getTitle()),
       elevation: 1,
       actions: [
         IconButton(
@@ -155,19 +171,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
         IconButton(
           icon: const Icon(Icons.today),
           onPressed: () {
-            final now = DateTime.now();
-            if (viewProvider.currentView == CalendarView.bulan) {
-              setState(() {
-                _focusedDay = now;
-                _selectedDay = now;
-              });
-            } else if (viewProvider.currentView == CalendarView.hari) {
+            setState(() {
+              _focusedDay = now;
+              _selectedDay = now;
               _dayViewKey.currentState?.jumpToDate(now);
-            } else if (viewProvider.currentView == CalendarView.minggu) {
-              setState(() {
-                _focusedDay = now;
-              });
-            }
+              _weekViewKey.currentState?.jumpToWeek(now);
+            });
           },
         ),
       ],
@@ -176,23 +185,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildCalendarView(
       ViewProvider viewProvider, EventProvider eventProvider) {
-    if (viewProvider.currentView == CalendarView.bulan) {
-      return Column(
-        children: [
-          _buildMonthView(eventProvider),
-          Expanded(child: _buildEventListForSelectedDay(eventProvider)),
-        ],
-      );
-    }
-
     switch (viewProvider.currentView) {
+      case CalendarView.jadwal:
+        return _buildScheduleView(eventProvider);
       case CalendarView.hari:
         return _buildDayView();
+      case CalendarView.tigaHari:
+        return _buildThreeDayView();
       case CalendarView.minggu:
         return _buildWeekView();
-      default:
-        return const Center(
-            child: Text("Tampilan ini belum diimplementasikan"));
+      case CalendarView.bulan:
+        return Column(
+          children: [
+            _buildMonthView(eventProvider),
+            Expanded(child: _buildEventListForSelectedDay(eventProvider)),
+          ],
+        );
     }
   }
 
@@ -296,6 +304,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       timeLineWidth: 60,
       showVerticalLine: true,
       initialDay: _focusedDay,
+      onPageChange: (date, page) => setState(() => _focusedDay = date),
       timeLineBuilder: (date) {
         if (date.minute != 0) return const SizedBox.shrink();
         return Padding(
@@ -310,9 +319,113 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildWeekView() {
     return WeekView(
+      key: _weekViewKey,
       controller: _eventController,
       initialDay: _focusedDay,
+      onPageChange: (date, page) => setState(() => _focusedDay = date),
       onEventTap: _onEventTapped,
+    );
+  }
+
+  Widget _buildThreeDayView() {
+    return WeekView(
+      key: _weekViewKey,
+      controller: _eventController,
+      initialDay: _focusedDay,
+      onPageChange: (date, page) => setState(() => _focusedDay = date),
+      onEventTap: _onEventTapped,
+    );
+  }
+
+  Widget _buildScheduleView(EventProvider eventProvider) {
+    final allEvents = eventProvider.events.values.expand((e) => e).toList();
+    allEvents.sort((a, b) => a.date.compareTo(b.date));
+
+    final Map<DateTime, List<app_event.Event>> groupedEvents = {};
+    for (var event in allEvents) {
+      final day = DateTime(event.date.year, event.date.month, event.date.day);
+      if (groupedEvents[day] == null) {
+        groupedEvents[day] = [];
+      }
+      groupedEvents[day]!.add(event);
+    }
+
+    final sortedDays = groupedEvents.keys.toList()..sort();
+
+    if (sortedDays.isEmpty) {
+      // FIX: Menambahkan `const` untuk performa
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.event_note, size: 60, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('Tidak ada jadwal acara.',
+                style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: sortedDays.length,
+      itemBuilder: (context, index) {
+        final day = sortedDays[index];
+        final eventsOnDay = groupedEvents[day]!;
+        final textTheme = Theme.of(context).textTheme;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  DateFormat.yMMMMEEEEd('id_ID').format(day),
+                  style: textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+              // FIX: Menggunakan `Column` untuk list item agar lebih rapi
+              Column(
+                  children: eventsOnDay.map((event) {
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4.0),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () {
+                      final fakeEventData = CalendarEventData(
+                          date: event.date, event: event, title: event.title);
+                      _onEventTapped([fakeEventData], event.date);
+                    },
+                    child: Row(
+                      children: [
+                        Container(
+                            width: 5,
+                            height: 50, // Memberi tinggi agar konsisten
+                            color: Color(event.colorValue)),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 65, // Memberi lebar yang cukup
+                          child: Text(
+                            event.startTime.format(context),
+                            style: textTheme.titleSmall,
+                          ),
+                        ),
+                        Expanded(
+                            child: Text(event.title,
+                                maxLines: 2, overflow: TextOverflow.ellipsis)),
+                        const SizedBox(width: 12),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList()),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -341,6 +454,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
       headerStyle: const table_calendar.HeaderStyle(
         formatButtonVisible: false,
         titleCentered: true,
+      ),
+      calendarBuilders: table_calendar.CalendarBuilders(
+        markerBuilder: (context, date, events) {
+          if (events.isEmpty) return null;
+          return Positioned(
+            right: 1,
+            bottom: 1,
+            // FIX: Menambahkan `const` untuk performa
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+              child: Text(
+                '${events.length}',
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
