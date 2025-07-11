@@ -27,6 +27,9 @@ class _EditEventScreenState extends State<EditEventScreen> {
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
   late int _selectedColorValue;
+  // State untuk fitur pengulangan
+  late RecurrenceType _recurrenceType;
+  DateTime? _untilDate;
 
   final List<Color> _colors = [
     const Color(0xFF2196F3), // Blue
@@ -51,6 +54,10 @@ class _EditEventScreenState extends State<EditEventScreen> {
         TimeOfDay(
             hour: TimeOfDay.now().hour + 1, minute: TimeOfDay.now().minute);
     _selectedColorValue = widget.event?.colorValue ?? _colors.first.value;
+
+    // Inisialisasi state pengulangan
+    _recurrenceType = widget.event?.recurrenceType ?? RecurrenceType.none;
+    _untilDate = widget.event?.untilDate;
   }
 
   @override
@@ -141,6 +148,10 @@ class _EditEventScreenState extends State<EditEventScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
+
+              // --- Bagian Pengulangan ---
+              _buildRecurrenceSection(),
               const SizedBox(height: 24),
 
               // --- Pemilih Warna ---
@@ -261,16 +272,74 @@ class _EditEventScreenState extends State<EditEventScreen> {
     );
   }
 
+  Widget _buildRecurrenceSection() {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Pengulangan Acara', style: textTheme.labelLarge),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<RecurrenceType>(
+          value: _recurrenceType,
+          decoration: _inputDecoration(hintText: 'Atur pengulangan'),
+          items: const [
+            DropdownMenuItem(
+                value: RecurrenceType.none, child: Text('Tidak Berulang')),
+            DropdownMenuItem(
+                value: RecurrenceType.daily, child: Text('Setiap Hari')),
+            DropdownMenuItem(
+                value: RecurrenceType.weekly, child: Text('Setiap Minggu')),
+            DropdownMenuItem(
+                value: RecurrenceType.monthly, child: Text('Setiap Bulan')),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _recurrenceType = value ?? RecurrenceType.none;
+              if (_recurrenceType == RecurrenceType.none) {
+                _untilDate = null;
+              }
+            });
+          },
+        ),
+        if (_recurrenceType != RecurrenceType.none) ...[
+          const SizedBox(height: 16),
+          _buildPickerCard(
+            icon: Icons.event_repeat_outlined,
+            label: 'Ulangi Hingga',
+            value: _untilDate == null
+                ? 'Pilih tanggal'
+                : DateFormat('d MMMM y', 'id_ID').format(_untilDate!),
+            onTap: _selectUntilDate,
+          ),
+        ],
+      ],
+    );
+  }
+
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime(2020),
+      firstDate: DateTime.now(),
       lastDate: DateTime(2030),
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
+      });
+    }
+  }
+
+  Future<void> _selectUntilDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _untilDate ?? _selectedDate.add(const Duration(days: 30)),
+      firstDate: _selectedDate,
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() {
+        _untilDate = picked;
       });
     }
   }
@@ -305,6 +374,14 @@ class _EditEventScreenState extends State<EditEventScreen> {
       return;
     }
 
+    if (_recurrenceType != RecurrenceType.none && _untilDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Harap tentukan tanggal akhir pengulangan')),
+      );
+      return;
+    }
+
     // Validasi waktu
     if ((_endTime.hour < _startTime.hour) ||
         (_endTime.hour == _startTime.hour &&
@@ -324,12 +401,14 @@ class _EditEventScreenState extends State<EditEventScreen> {
       startTime: _startTime,
       endTime: _endTime,
       colorValue: _selectedColorValue,
+      recurrenceType: _recurrenceType,
+      untilDate: _untilDate,
     );
 
-    // Simpan referensi sebelum await
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     final eventProvider = context.read<EventProvider>();
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
@@ -338,11 +417,12 @@ class _EditEventScreenState extends State<EditEventScreen> {
       } else {
         await eventProvider.updateEvent(event);
       }
-      navigator.pop(true); // Kirim sinyal sukses
+      navigator.pop(true);
     } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Gagal menyimpan acara: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Gagal menyimpan acara: $e')));
+      }
     }
   }
 
@@ -351,7 +431,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Hapus Acara'),
-        content: const Text('Apakah Anda yakin ingin menghapus acara ini?'),
+        content: const Text(
+            'Apakah Anda yakin ingin menghapus acara ini? Ini akan menghapus semua pengulangannya.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -367,21 +448,21 @@ class _EditEventScreenState extends State<EditEventScreen> {
     );
 
     if (confirmed == true && widget.event?.id != null) {
-      // Simpan referensi sebelum await
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final eventProvider = context.read<EventProvider>();
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
       final navigator = Navigator.of(context);
-
       try {
         await eventProvider.deleteEvent(widget.event!.id!);
-        // Pop dua kali untuk menutup dialog dan halaman edit
-        navigator.pop(true); // Kirim sinyal sukses
+        navigator.pop(true);
       } catch (e) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text('Gagal menghapus acara: $e')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Gagal menghapus acara: $e')));
+        }
       }
     }
   }
 }
+//aden

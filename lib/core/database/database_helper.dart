@@ -8,8 +8,8 @@ class DatabaseHelper {
   static Database? _database;
 
   static const _databaseName = "KalenderApp.db";
-  static const _databaseVersion =
-      1; // Kita reset ke versi 1 untuk instalasi bersih
+  // NOTE: Jika aplikasi sudah production, versi harus dinaikkan dan dibuatkan onUpgrade
+  static const _databaseVersion = 1;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -22,14 +22,11 @@ class DatabaseHelper {
     return await openDatabase(
       path,
       version: _databaseVersion,
-      onCreate: _onCreate, // Cukup gunakan onCreate untuk instalasi baru
+      onCreate: _onCreate,
     );
   }
 
-  // Fungsi ini HANYA akan berjalan jika database belum ada di perangkat.
-  // Ini adalah satu-satunya tempat kita membuat tabel.
   Future<void> _onCreate(Database db, int version) async {
-    // Membuat tabel events
     await db.execute('''
       CREATE TABLE events(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,11 +35,13 @@ class DatabaseHelper {
         date TEXT,
         startTime TEXT, 
         endTime TEXT, 
-        colorValue INTEGER
+        colorValue INTEGER,
+        -- --- TAMBAHAN BARU ---
+        recurrenceType TEXT,
+        untilDate TEXT
       )
     ''');
 
-    // Membuat tabel todos
     await db.execute('''
       CREATE TABLE todos(
         id INTEGER PRIMARY KEY AUTOINCREMENT,

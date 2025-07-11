@@ -1,7 +1,5 @@
-// lib/features/calendar/presentation/widgets/app_drawer.dart
 import 'package:flutter/material.dart';
 import 'package:kalender/app/config/router/app_router.dart';
-import 'package:kalender/features/calendar/presentation/provider/event_provider.dart';
 import 'package:kalender/features/calendar/presentation/provider/view_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -37,15 +35,6 @@ class AppDrawer extends StatelessWidget {
                   onTap: () {
                     Navigator.pop(context); // Selalu tutup drawer dulu
                     Navigator.pushNamed(context, AppRouter.todoList);
-                  },
-                ),
-
-                ListTile(
-                  leading: const Icon(Icons.refresh_outlined),
-                  title: const Text('Segarkan'),
-                  onTap: () {
-                    context.read<EventProvider>().getEvents();
-                    Navigator.pop(context);
                   },
                 ),
                 ListTile(

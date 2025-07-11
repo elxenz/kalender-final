@@ -11,9 +11,10 @@ class EventModel extends Event {
     required super.startTime,
     required super.endTime,
     super.colorValue,
+    super.recurrenceType,
+    super.untilDate,
   });
 
-  // Konversi dari Map (data dari database) ke EventModel
   factory EventModel.fromMap(Map<String, dynamic> map) {
     return EventModel(
       id: map['id'],
@@ -29,10 +30,16 @@ class EventModel extends Event {
         minute: int.parse(map['endTime'].split(':')[1]),
       ),
       colorValue: map['colorValue'] ?? 0xFF2196F3,
+      // --- TAMBAHAN BARU: Baca data pengulangan ---
+      recurrenceType: RecurrenceType.values.firstWhere(
+        (e) => e.toString() == map['recurrenceType'],
+        orElse: () => RecurrenceType.none,
+      ),
+      untilDate:
+          map['untilDate'] != null ? DateTime.parse(map['untilDate']) : null,
     );
   }
 
-  // Konversi dari Event ke EventModel
   factory EventModel.fromEntity(Event event) {
     return EventModel(
       id: event.id,
@@ -42,10 +49,11 @@ class EventModel extends Event {
       startTime: event.startTime,
       endTime: event.endTime,
       colorValue: event.colorValue,
+      recurrenceType: event.recurrenceType,
+      untilDate: event.untilDate,
     );
   }
 
-  // Konversi dari EventModel ke Event
   Event toEntity() {
     return Event(
       id: id,
@@ -55,10 +63,11 @@ class EventModel extends Event {
       startTime: startTime,
       endTime: endTime,
       colorValue: colorValue,
+      recurrenceType: recurrenceType,
+      untilDate: untilDate,
     );
   }
 
-  // Konversi dari Event/EventModel ke Map (untuk disimpan ke database)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -70,7 +79,9 @@ class EventModel extends Event {
       'endTime':
           '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
       'colorValue': colorValue,
-      
+      // --- TAMBAHAN BARU: Simpan data pengulangan ---
+      'recurrenceType': recurrenceType.toString(),
+      'untilDate': untilDate?.toIso8601String(),
     };
   }
 }
